@@ -16,8 +16,7 @@
     <maven.compiler.target>11</maven.compiler.target>
     <sonar.coverage.exclusions>
       **/com/epam/digital/data/platform/keycloak/rest/api/ext/dto/**/*,
-      **/UserApiProviderFactory.java,
-      **/UserApiProvider.java
+      **/UserApiProviderFactory.java
     </sonar.coverage.exclusions>
   </properties>
 

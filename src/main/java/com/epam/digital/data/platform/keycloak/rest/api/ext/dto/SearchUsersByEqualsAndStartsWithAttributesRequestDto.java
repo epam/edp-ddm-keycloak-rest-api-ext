@@ -16,10 +16,11 @@
 
 package com.epam.digital.data.platform.keycloak.rest.api.ext.dto;
 
+import java.util.List;
 import java.util.Map;
 
-public class SearchUserRequestDto {
+public class SearchUsersByEqualsAndStartsWithAttributesRequestDto {
 
-  public Map<String, String> attributes;
-
+  public Map<String, String> attributesEquals;
+  public Map<String, List<String>> attributesStartsWith;
 }
