@@ -1,10 +1,24 @@
+/*
+ * Copyright 2022 EPAM Systems.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.epam.digital.data.platform.keycloak.rest.api.ext;
 
 import com.epam.digital.data.platform.keycloak.rest.api.ext.dto.SearchUserRequestDto;
-import java.util.Collections;
+import com.epam.digital.data.platform.keycloak.rest.api.ext.dto.SearchUsersByEqualsAndStartsWithAttributesRequestDto;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,9 +40,11 @@ import org.keycloak.utils.MediaType;
 
 public class UserApiProvider extends AdminRoot implements RealmResourceProvider {
 
+  private final UserFilter userFilter;
 
-  public UserApiProvider(KeycloakSession session) {
+  public UserApiProvider(KeycloakSession session, UserFilter userFilter) {
     this.session = session;
+    this.userFilter = userFilter;
   }
 
   public void close() {
@@ -43,14 +59,42 @@ public class UserApiProvider extends AdminRoot implements RealmResourceProvider 
   @NoCache
   @Produces({MediaType.APPLICATION_JSON})
   @Encoded
-  public List<UserRepresentation> searchUsersByAttribute(@Context final HttpRequest request,
-      SearchUserRequestDto searchUserRequestDto) {
+  public List<UserRepresentation> searchUsersByAttributes(@Context final HttpRequest request,
+      SearchUserRequestDto requestDto) {
     authenticateRealmAdminRequest(request.getHttpHeaders());
     validateRequestRealm(request, session.getContext().getRealm().getName());
-    return filterUsersByAttributes(session, searchUserRequestDto.attributes);
+    return toRepresentation(
+        userFilter.filterUsersByAttributesEquals(session, requestDto.attributes));
   }
 
-  private void validateRequestRealm(HttpRequest request, String realmName) {
+  @POST
+  @Path("search-by-attributes")
+  @NoCache
+  @Produces({MediaType.APPLICATION_JSON})
+  @Encoded
+  public List<UserRepresentation> searchUsersByAttributes(@Context final HttpRequest request,
+      SearchUsersByEqualsAndStartsWithAttributesRequestDto requestDto) {
+    authenticateRealmAdminRequest(request.getHttpHeaders());
+    validateRequestRealm(request, session.getContext().getRealm().getName());
+    if (requestDto.attributesEquals == null || requestDto.attributesEquals.isEmpty()) {
+      var userModels = userFilter.filterUsersByAttributesInvertedStartsWith(
+          session.users().getUsersStream(session.getContext().getRealm()),
+          requestDto.attributesStartsWith);
+      return toRepresentation(userModels);
+    } 
+    if (requestDto.attributesStartsWith == null || requestDto.attributesStartsWith.isEmpty()) {
+      return toRepresentation(
+          userFilter.filterUsersByAttributesEquals(session, requestDto.attributesEquals));
+    }
+
+    var userModels = userFilter.filterUsersByAttributesEquals(
+        session, requestDto.attributesEquals);
+    userModels = userFilter.filterUsersByAttributesInvertedStartsWith(userModels,
+        requestDto.attributesStartsWith);
+    return toRepresentation(userModels);
+  }
+
+  protected void validateRequestRealm(HttpRequest request, String realmName) {
     var realmNamePathOrder = 1;
     var pathSegment = request.getUri().getPathSegments().get(realmNamePathOrder);
     if (!Objects.equals(pathSegment.toString(), realmName)) {
@@ -58,25 +102,8 @@ public class UserApiProvider extends AdminRoot implements RealmResourceProvider 
     }
   }
 
-  private List<UserRepresentation> filterUsersByAttributes(KeycloakSession session,
-      Map<String, String> attributes) {
-    if (attributes == null || attributes.entrySet().isEmpty()) {
-      return Collections.emptyList();
-    }
-    int i = 0;
-    Stream<UserModel> userModelStream = Stream.empty();
-    for (Entry<String, String> entry : attributes.entrySet()) {
-      if (i == 0) {
-        userModelStream = session.users().searchForUserByUserAttributeStream(
-            session.getContext().getRealm(), entry.getKey(), entry.getValue());
-        i++;
-      }
-      userModelStream = userModelStream.filter(
-          userModel -> Objects.equals(userModel.getFirstAttribute(entry.getKey()),
-              entry.getValue()));
-    }
+  protected List<UserRepresentation> toRepresentation(Stream<UserModel> userModelStream) {
     return userModelStream.map(userModel -> ModelToRepresentation.toRepresentation(session,
         session.getContext().getRealm(), userModel)).collect(Collectors.toList());
   }
-
 }
