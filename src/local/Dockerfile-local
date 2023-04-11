@@ -1,0 +1,14 @@
+FROM quay.io/keycloak/keycloak:15.1.1
+
+ENV JAVA_OPTS="-Xms64M -Xmx2048M -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+ENV KEYCLOAK_USER=admin
+ENV KEYCLOAK_PASSWORD=admin
+
+ARG KEYCLOAK_REST_API_EXT_VERSION=keycloak-rest-api-ext-1.6.0.jar
+
+USER 0
+
+ADD target/$KEYCLOAK_REST_API_EXT_VERSION /opt/jboss/keycloak/standalone/deployments/keycloak-rest-api-ext.jar
+RUN chown jboss:jboss /opt/jboss/keycloak/standalone/deployments/keycloak-rest-api-ext.jar
+
+USER 1000
