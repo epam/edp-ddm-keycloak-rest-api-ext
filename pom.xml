@@ -25,7 +25,7 @@
   <version>1.6.0</version>
 
   <properties>
-    <keycloak.version>15.1.1</keycloak.version>
+    <keycloak.version>20.0.3</keycloak.version>
     <lombok.version>1.18.24</lombok.version>
 
     <junit.jupiter.version>5.8.2</junit.jupiter.version>
@@ -57,6 +57,13 @@
       <artifactId>keycloak-services</artifactId>
       <scope>provided</scope>
       <version>${keycloak.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-model-legacy-private</artifactId>
+      <version>${keycloak.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
