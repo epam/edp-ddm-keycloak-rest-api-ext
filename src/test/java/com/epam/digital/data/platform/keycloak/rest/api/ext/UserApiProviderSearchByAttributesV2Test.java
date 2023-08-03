@@ -39,12 +39,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.keycloak.models.KeycloakContext;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.UserCredentialManager;
-import org.keycloak.models.UserModel;
-import org.keycloak.models.UserProvider;
+import org.keycloak.models.*;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.Mockito;
 
@@ -83,14 +78,13 @@ class UserApiProviderSearchByAttributesV2Test {
     var context = Mockito.mock(KeycloakContext.class);
     var realm = Mockito.mock(RealmModel.class);
     var userProvider = Mockito.mock(UserProvider.class);
-    var userCredentialManager = Mockito.mock(UserCredentialManager.class);
+
     request = Mockito.mock(HttpRequest.class);
     userApiProvider = new UserApiProviderTestImpl(session, new UserFilter());
     when(session.getContext()).thenReturn(context);
     when(context.getRealm()).thenReturn(realm);
     when(realm.getName()).thenReturn("realmName");
     when(session.users()).thenReturn(userProvider);
-    Mockito.doReturn(userCredentialManager).when(session).userCredentialManager();
 
     Mockito.doAnswer(invocation -> {
       var firstResult = (int) invocation.getArgument(1);
@@ -198,12 +192,14 @@ class UserApiProviderSearchByAttributesV2Test {
 
   private UserModel mapToUserModelMock(User user) {
     var userModel = Mockito.mock(UserModel.class);
+    var userCredentialManager = Mockito.mock(SubjectCredentialManager.class);
     Mockito.doReturn(user.getUserName()).when(userModel).getUsername();
     Mockito.doAnswer(invocation -> {
       var attrName = (String) invocation.getArgument(0);
       return user.getAttributes().getOrDefault(attrName, List.of()).stream();
     }).when(userModel).getAttributeStream(anyString());
     Mockito.doReturn(user.getAttributes()).when(userModel).getAttributes();
+    Mockito.doReturn(userCredentialManager).when(userModel).credentialManager();
     Mockito.doReturn("someId").when(userModel).getId();
     return userModel;
   }
